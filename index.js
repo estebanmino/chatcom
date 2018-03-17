@@ -1,63 +1,25 @@
-'use strict'
+var express = require("express");
+var request = require("request");
+var bodyParser = require("body-parser");
 
-const express = require('express')
-const bodyParser = require('body-parser')
-const request = require('request')
+var app = express();
+app.use(bodyParser.urlencoded({extended: false}));
+app.use(bodyParser.json());
+app.listen((process.env.PORT || 5000));
 
-const app = express()
-const TOKEN = "EAAH5TpZCcKvcBAApjxMCW3k68QWZCK2fT47edt4Mb3PO4jlIqPBhocEKUxlvgcCvAeoQvEX0NdLG0kve8ZBUherxF9jbUGKGeHsUkLO2FMzzbhvaSPkMx40KjCeyt0cvjmGsVZAAAgAGIxWz25ZC3ggx5Owypro50caVAKJb1VwZDZD";
+// Server index page
+app.get("/", function (req, res) {
+  res.send("Deployed!");
+});
 
-app.set('port', (process.env.PORT || 5000))
-
-app.use(bodyParser.urlencoded({extended: false}))
-app.use(bodyParser.json())
-
-// ROUTES
-app.get('/', function(req, res) {
-    res.send("Hi from chatcom")
-})
-
-// facebook
-
-app.post('/webhook/', function(req, res) {
-    let messaging_events= req.body.entry[0].messaging
-    for (let i =0; i < messaging_events.length; i++) {
-        let event = messaging_events[i]
-        let sender = event.sender.id
-        if (event.message && event.message.text) {
-            let text = event.message.text
-            sendText(sender, "Text: " + text.substring(0,100))
-        }
-    }
-    res.sendStatus(200)
-})
-
-function sendText(sender, text) {
-    let messageData = {text: text}
-    request({
-        url: "https://graph.facebook.com/v2.12/me/messages",
-        qs: {access_token: TOKEN },
-        method: "POST",
-        json: {
-            recipient:  {id: sender},
-            message: messageData
-        }, function(error, response, body) {
-            if (error) {
-                console.log('sending error')
-            } else if (response.body.error) {
-                console.log("response body error")
-            }
-        }
-    })
-}
-
-app.get('/webhook/', function(req, res) {
-    if (req.query['hub.verify_token'] === TOKEN) {
-        res.send(req.query['hub.challenge'])
-    }
-    res.send("Wrong token")
-})
-
-app.listen(app.get('port'), function() {
-    console.log('running: port')
-})
+// Facebook Webhook
+// Used for verification
+app.get("/webhook", function (req, res) {
+  if (req.query["hub.verify_token"] === "this_is_my_token") {
+    console.log("Verified webhook");
+    res.status(200).send(req.query["hub.challenge"]);
+  } else {
+    console.error("Verification failed. The tokens do not match.");
+    res.sendStatus(403);
+  }
+});
